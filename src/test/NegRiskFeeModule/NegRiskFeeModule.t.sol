@@ -86,6 +86,7 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
         makerOrders[0] = brianOrder;
         uint256[] memory makerFillAmounts = new uint256[](1);
         makerFillAmounts[0] = TOKEN_AMOUNT;
+        uint256[] memory makerFeeAmounts = new uint256[](1);
 
         // before
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), 0);
@@ -95,7 +96,8 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
 
         // -- MATCH ORDERS --
         vm.prank(operator.addr);
-        IFeeModule(negRiskFeeModule).matchOrders(takerOrder, makerOrders, takerFillAmount, makerFillAmounts, 0);
+        IFeeModule(negRiskFeeModule)
+            .matchOrders(takerOrder, makerOrders, takerFillAmount, TOKEN_AMOUNT, makerFillAmounts, 0, makerFeeAmounts);
 
         // after
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), TOKEN_AMOUNT);
@@ -161,6 +163,7 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
         makerOrders[0] = aliceOrder;
         uint256[] memory makerFillAmounts = new uint256[](1);
         makerFillAmounts[0] = USDC_AMOUNT;
+        uint256[] memory makerFeeAmounts = new uint256[](1);
 
         // before
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), 0);
@@ -170,7 +173,8 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
 
         // -- MATCH ORDERS --
         vm.prank(operator.addr);
-        IFeeModule(negRiskFeeModule).matchOrders(takerOrder, makerOrders, takerFillAmount, makerFillAmounts, 0);
+        IFeeModule(negRiskFeeModule)
+            .matchOrders(takerOrder, makerOrders, takerFillAmount, USDC_AMOUNT, makerFillAmounts, 0, makerFeeAmounts);
 
         // after
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), TOKEN_AMOUNT);
@@ -222,6 +226,7 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
         makerOrders[0] = brianOrder;
         uint256[] memory makerFillAmounts = new uint256[](1);
         makerFillAmounts[0] = USDC_AMOUNT;
+        uint256[] memory makerFeeAmounts = new uint256[](1);
 
         // before
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), 0);
@@ -233,7 +238,8 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
 
         // -- MATCH ORDERS --
         vm.prank(operator.addr);
-        IFeeModule(negRiskFeeModule).matchOrders(takerOrder, makerOrders, takerFillAmount, makerFillAmounts, 0);
+        IFeeModule(negRiskFeeModule)
+            .matchOrders(takerOrder, makerOrders, takerFillAmount, TOKEN_AMOUNT, makerFillAmounts, 0, makerFeeAmounts);
 
         // after
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), TOKEN_AMOUNT);
@@ -300,6 +306,7 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
         makerOrders[0] = brianOrder;
         uint256[] memory makerFillAmounts = new uint256[](1);
         makerFillAmounts[0] = TOKEN_AMOUNT;
+        uint256[] memory makerFeeAmounts = new uint256[](1);
 
         // before
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), TOKEN_AMOUNT);
@@ -311,7 +318,8 @@ contract NegRiskFeeModule_Test is NegRiskFeeModuleTestHelper {
 
         // -- MATCH ORDERS --
         vm.prank(operator.addr);
-        IFeeModule(negRiskFeeModule).matchOrders(takerOrder, makerOrders, takerFillAmount, makerFillAmounts, 0);
+        IFeeModule(negRiskFeeModule)
+            .matchOrders(takerOrder, makerOrders, takerFillAmount, USDC_AMOUNT, makerFillAmounts, 0, makerFeeAmounts);
 
         // after
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), 0);

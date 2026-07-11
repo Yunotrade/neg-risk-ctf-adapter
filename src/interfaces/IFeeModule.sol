@@ -19,8 +19,10 @@ interface IFeeModule {
         ICTFExchange.Order memory takerOrder,
         ICTFExchange.Order[] memory makerOrders,
         uint256 takerFillAmount,
+        uint256 takerReceiveAmount,
         uint256[] memory makerFillAmounts,
-        uint256 makerFeeRate
+        uint256 takerFeeAmount,
+        uint256[] memory makerFeeAmounts
     ) external;
     function onERC1155BatchReceived(address, address, uint256[] memory, uint256[] memory, bytes memory)
         external
