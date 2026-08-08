@@ -16,3 +16,5 @@ lcov.info
 env/
 
 node_modules/
+.codex-worktrees/
+.skills-workspace/
