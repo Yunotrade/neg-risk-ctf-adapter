@@ -8,6 +8,8 @@ import {IConditionalTokens, ICTFExchange, IERC20, INegRiskAdapter} from "../../i
 import {NegRiskCtfExchangeTestHelper} from "./NegRiskCtfExchangeTestHelper.sol";
 
 interface INegRiskFeeExchange {
+    error FeeRecipientAlreadySet();
+
     function hashOrder(Order memory order) external view returns (bytes32);
 
     function matchOrdersWithFees(
@@ -16,6 +18,10 @@ interface INegRiskFeeExchange {
         FeeFill memory takerFill,
         FeeFill[] memory makerFills
     ) external;
+
+    function setFeeRecipient(address recipient) external;
+
+    function enableV11Only() external;
 }
 
 contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
@@ -24,6 +30,7 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
     uint256 internal constant PI = 4e17;
     uint256 internal constant F = 1_000_000;
     uint256 internal constant FEE_RATE_BPS = 1_000;
+    address internal feeRecipient;
 
     function setUp() public {
         marketId = INegRiskAdapter(negRiskAdapter).prepareMarket(0, "fee_parity_market");
@@ -33,8 +40,12 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         yesPositionId = INegRiskAdapter(negRiskAdapter).getPositionId(questionId, true);
         noPositionId = INegRiskAdapter(negRiskAdapter).getPositionId(questionId, false);
 
-        vm.prank(admin.addr);
+        feeRecipient = makeAddr("feeRecipient");
+        vm.startPrank(admin.addr);
         ICTFExchange(negRiskCtfExchange).registerToken(yesPositionId, noPositionId, conditionId);
+        _exchange().setFeeRecipient(feeRecipient);
+        _exchange().enableV11Only();
+        vm.stopPrank();
     }
 
     function test_NegRisk_matchOrdersWithFees_complementary_buyNPlusF_sellPMinusF() public {
@@ -49,15 +60,23 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         uint256 aliceCollateralBefore = IERC20(usdc).balanceOf(alice.addr);
         uint256 brianCollateralBefore = IERC20(usdc).balanceOf(brian.addr);
         uint256 operatorCollateralBefore = IERC20(usdc).balanceOf(operator.addr);
+        uint256 feeRecipientCollateralBefore = IERC20(usdc).balanceOf(feeRecipient);
 
         _match(buy, sell);
 
         assertEq(IERC20(usdc).balanceOf(alice.addr), aliceCollateralBefore - (n + F), "BUY must debit N+f");
         assertEq(IERC20(usdc).balanceOf(brian.addr), brianCollateralBefore + (n - F), "SELL must receive P-f");
-        assertEq(IERC20(usdc).balanceOf(operator.addr), operatorCollateralBefore + (2 * F), "fees");
+        assertEq(IERC20(usdc).balanceOf(operator.addr), operatorCollateralBefore, "operator must not custody fees");
+        assertEq(IERC20(usdc).balanceOf(feeRecipient), feeRecipientCollateralBefore + (2 * F), "fees");
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), Q, "buyer shares");
         assertEq(IConditionalTokens(ctf).balanceOf(brian.addr, yesPositionId), 0, "seller shares");
         _assertNoExchangeResidual();
+    }
+
+    function test_NegRisk_feeRecipientCannotBeReassigned() public {
+        vm.prank(admin.addr);
+        vm.expectRevert(INegRiskFeeExchange.FeeRecipientAlreadySet.selector);
+        _exchange().setFeeRecipient(makeAddr("replacementFeeRecipient"));
     }
 
     function test_NegRisk_matchOrdersWithFees_mint_exactComplementAndBuyNPlusF() public {
@@ -73,12 +92,14 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         uint256 aliceCollateralBefore = IERC20(usdc).balanceOf(alice.addr);
         uint256 brianCollateralBefore = IERC20(usdc).balanceOf(brian.addr);
         uint256 operatorCollateralBefore = IERC20(usdc).balanceOf(operator.addr);
+        uint256 feeRecipientCollateralBefore = IERC20(usdc).balanceOf(feeRecipient);
 
         _match(yesBuy, noBuy);
 
         assertEq(IERC20(usdc).balanceOf(alice.addr), aliceCollateralBefore - (nYes + F), "YES BUY N+f");
         assertEq(IERC20(usdc).balanceOf(brian.addr), brianCollateralBefore - (nNo + F), "NO BUY N+f");
-        assertEq(IERC20(usdc).balanceOf(operator.addr), operatorCollateralBefore + (2 * F), "fees");
+        assertEq(IERC20(usdc).balanceOf(operator.addr), operatorCollateralBefore, "operator must not custody fees");
+        assertEq(IERC20(usdc).balanceOf(feeRecipient), feeRecipientCollateralBefore + (2 * F), "fees");
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), Q, "YES shares");
         assertEq(IConditionalTokens(ctf).balanceOf(brian.addr, noPositionId), Q, "NO shares");
         _assertNoExchangeResidual();
@@ -98,12 +119,14 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         uint256 aliceCollateralBefore = IERC20(usdc).balanceOf(alice.addr);
         uint256 brianCollateralBefore = IERC20(usdc).balanceOf(brian.addr);
         uint256 operatorCollateralBefore = IERC20(usdc).balanceOf(operator.addr);
+        uint256 feeRecipientCollateralBefore = IERC20(usdc).balanceOf(feeRecipient);
 
         _match(yesSell, noSell);
 
         assertEq(IERC20(usdc).balanceOf(alice.addr), aliceCollateralBefore + (pYes - F), "YES SELL P-f");
         assertEq(IERC20(usdc).balanceOf(brian.addr), brianCollateralBefore + (pNo - F), "NO SELL P-f");
-        assertEq(IERC20(usdc).balanceOf(operator.addr), operatorCollateralBefore + (2 * F), "fees");
+        assertEq(IERC20(usdc).balanceOf(operator.addr), operatorCollateralBefore, "operator must not custody fees");
+        assertEq(IERC20(usdc).balanceOf(feeRecipient), feeRecipientCollateralBefore + (2 * F), "fees");
         assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), 0, "YES sold");
         assertEq(IConditionalTokens(ctf).balanceOf(brian.addr, noPositionId), 0, "NO sold");
         _assertNoExchangeResidual();
