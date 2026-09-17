@@ -26,7 +26,8 @@ interface INegRiskFeeExchange {
 
 contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
     uint256 internal constant S = 1e18;
-    uint256 internal constant Q = 100_000_003;
+    // Exact 40c/60c so fee-exclusive YES+NO bids still cross (nYes+nNo=q).
+    uint256 internal constant Q = 100_000_000;
     uint256 internal constant PI = 4e17;
     uint256 internal constant F = 1_000_000;
     uint256 internal constant FEE_RATE_BPS = 1_000;
@@ -48,13 +49,13 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         vm.stopPrank();
     }
 
-    function test_NegRisk_matchOrdersWithFees_complementary_buyNPlusF_sellPMinusF() public {
+    function test_NegRisk_matchOrdersWithFees_complementary_buySignsN_sellPMinusF() public {
         uint256 n = GrossBudgetFeeMath.executionCollateral(Q, PI, S);
         _fundBuyer(alice.addr, n + F);
         _fundOutcome(brian.addr, yesPositionId, Q);
         _approveOutcomeSeller(brian.addr);
 
-        Order memory buy = _createFeeOrder(alice.privateKey, yesPositionId, n + F, Q, Side.BUY);
+        Order memory buy = _createFeeOrder(alice.privateKey, yesPositionId, n, Q, Side.BUY);
         Order memory sell = _createFeeOrder(brian.privateKey, yesPositionId, Q, n, Side.SELL);
 
         uint256 aliceCollateralBefore = IERC20(usdc).balanceOf(alice.addr);
@@ -79,15 +80,15 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         _exchange().setFeeRecipient(makeAddr("replacementFeeRecipient"));
     }
 
-    function test_NegRisk_matchOrdersWithFees_mint_exactComplementAndBuyNPlusF() public {
+    function test_NegRisk_matchOrdersWithFees_mint_exactComplementAndBuySignsN() public {
         (uint256 nYes, uint256 nNo) = GrossBudgetFeeMath.complementNotionals(Q, PI, S);
         assertEq(nYes + nNo, Q, "N_yes + N_no must equal q");
 
         _fundBuyer(alice.addr, nYes + F);
         _fundBuyer(brian.addr, nNo + F);
 
-        Order memory yesBuy = _createFeeOrder(alice.privateKey, yesPositionId, nYes + F, Q, Side.BUY);
-        Order memory noBuy = _createFeeOrder(brian.privateKey, noPositionId, nNo + F, Q, Side.BUY);
+        Order memory yesBuy = _createFeeOrder(alice.privateKey, yesPositionId, nYes, Q, Side.BUY);
+        Order memory noBuy = _createFeeOrder(brian.privateKey, noPositionId, nNo, Q, Side.BUY);
 
         uint256 aliceCollateralBefore = IERC20(usdc).balanceOf(alice.addr);
         uint256 brianCollateralBefore = IERC20(usdc).balanceOf(brian.addr);
