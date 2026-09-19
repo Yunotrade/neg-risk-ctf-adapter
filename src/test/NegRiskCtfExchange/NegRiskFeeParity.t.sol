@@ -74,6 +74,39 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         _assertNoExchangeResidual();
     }
 
+    function test_NegRisk_matchOrdersWithFees_complementary_oneDollarAt53Cents() public {
+        uint256 q = 1_886_792;
+        uint256 pi = 53e16;
+        uint256 budget = GrossBudgetFeeMath.executionCollateralCeil(q, pi, S);
+        uint256 floorNotional = GrossBudgetFeeMath.executionCollateral(q, pi, S);
+        uint256 fee = q * (S - pi) * FEE_RATE_BPS / (S * 10_000);
+        assertEq(budget, 1_000_000, "ceil notional");
+        assertEq(floorNotional, 999_999, "floor is one atom short of GrossProceedsFloor");
+
+        _fundBuyer(alice.addr, budget + fee);
+        _fundOutcome(brian.addr, yesPositionId, q);
+        _approveOutcomeSeller(brian.addr);
+
+        Order memory buy = _createFeeOrder(alice.privateKey, yesPositionId, budget, q, Side.BUY);
+        Order memory sell = _createFeeOrder(brian.privateKey, yesPositionId, Q, Q * pi / S, Side.SELL);
+
+        Order[] memory makerOrders = new Order[](1);
+        makerOrders[0] = sell;
+        FeeFill[] memory makerFills = new FeeFill[](1);
+        makerFills[0] = FeeFill({q: q, pi: pi, f: fee});
+
+        uint256 aliceCollateralBefore = IERC20(usdc).balanceOf(alice.addr);
+        uint256 brianCollateralBefore = IERC20(usdc).balanceOf(brian.addr);
+
+        vm.prank(operator.addr);
+        _exchange().matchOrdersWithFees(buy, makerOrders, makerFills[0], makerFills);
+
+        assertEq(IERC20(usdc).balanceOf(alice.addr), aliceCollateralBefore - (budget + fee), "BUY debit ceil N+f");
+        assertEq(IERC20(usdc).balanceOf(brian.addr), brianCollateralBefore + (budget - fee), "SELL receive ceil P-f");
+        assertEq(IConditionalTokens(ctf).balanceOf(alice.addr, yesPositionId), q, "buyer shares");
+        _assertNoExchangeResidual();
+    }
+
     function test_NegRisk_feeRecipientCannotBeReassigned() public {
         vm.prank(admin.addr);
         vm.expectRevert(INegRiskFeeExchange.FeeRecipientAlreadySet.selector);
