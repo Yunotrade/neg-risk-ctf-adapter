@@ -79,7 +79,7 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         uint256 pi = 53e16;
         uint256 budget = GrossBudgetFeeMath.executionCollateralCeil(q, pi, S);
         uint256 floorNotional = GrossBudgetFeeMath.executionCollateral(q, pi, S);
-        uint256 fee = q * (S - pi) * FEE_RATE_BPS / (S * 10_000);
+        uint256 fee = q * pi * (S - pi) * FEE_RATE_BPS / (S * S * 10_000);
         assertEq(budget, 1_000_000, "ceil notional");
         assertEq(floorNotional, 999_999, "floor is one atom short of GrossProceedsFloor");
 
