@@ -70,4 +70,23 @@ contract NegRiskCtfExchangeTestHelper is Test, OrderHelper, StorageHelper {
 
         vm.stopPrank();
     }
+
+    function _fundBuyer(address buyer, uint256 amount) internal {
+        _dealERC20(usdc, buyer, amount);
+        vm.prank(buyer);
+        IERC20(usdc).approve(negRiskCtfExchange, type(uint256).max);
+    }
+
+    function _approveOutcomeSeller(address seller) internal {
+        vm.startPrank(seller);
+        IConditionalTokens(ctf).setApprovalForAll(negRiskCtfExchange, true);
+        IConditionalTokens(ctf).setApprovalForAll(negRiskAdapter, true);
+        vm.stopPrank();
+    }
+
+    function _assertNoExchangeResidual() internal view {
+        assertEq(IERC20(usdc).balanceOf(negRiskCtfExchange), 0, "collateral residual");
+        assertEq(IConditionalTokens(ctf).balanceOf(negRiskCtfExchange, yesPositionId), 0, "YES residual");
+        assertEq(IConditionalTokens(ctf).balanceOf(negRiskCtfExchange, noPositionId), 0, "NO residual");
+    }
 }

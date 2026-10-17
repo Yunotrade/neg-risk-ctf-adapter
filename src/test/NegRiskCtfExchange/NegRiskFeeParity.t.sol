@@ -202,12 +202,6 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         _exchange().matchOrdersWithFees(takerOrder, makerOrders, takerFill, makerFills);
     }
 
-    function _fundBuyer(address buyer, uint256 amount) internal {
-        _dealERC20(usdc, buyer, amount);
-        vm.prank(buyer);
-        IERC20(usdc).approve(negRiskCtfExchange, type(uint256).max);
-    }
-
     function _fundOutcome(address recipient, uint256 positionId, uint256 amount) internal {
         vm.startPrank(carly.addr);
         _dealERC20(usdc, carly.addr, amount);
@@ -225,19 +219,6 @@ contract NegRiskFeeParityTest is NegRiskCtfExchangeTestHelper {
         IConditionalTokens(ctf).safeTransferFrom(carly.addr, yesRecipient, yesPositionId, amount, "");
         IConditionalTokens(ctf).safeTransferFrom(carly.addr, noRecipient, noPositionId, amount, "");
         vm.stopPrank();
-    }
-
-    function _approveOutcomeSeller(address seller) internal {
-        vm.startPrank(seller);
-        IConditionalTokens(ctf).setApprovalForAll(negRiskCtfExchange, true);
-        IConditionalTokens(ctf).setApprovalForAll(negRiskAdapter, true);
-        vm.stopPrank();
-    }
-
-    function _assertNoExchangeResidual() internal view {
-        assertEq(IERC20(usdc).balanceOf(negRiskCtfExchange), 0, "collateral residual");
-        assertEq(IConditionalTokens(ctf).balanceOf(negRiskCtfExchange, yesPositionId), 0, "YES residual");
-        assertEq(IConditionalTokens(ctf).balanceOf(negRiskCtfExchange, noPositionId), 0, "NO residual");
     }
 
     function _exchange() internal view returns (INegRiskFeeExchange) {
